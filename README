@@ -11,7 +11,7 @@ CONTENTS OF THIS FILE
 INTRODUCTION
 ------------
 
-Current Maintainer: damanar <damanar@gmail.com>
+Current Maintainer: damanar <damanar at gmail dot com>
 
 I couldn't find a CLI tool to do recursive renaming of files, so I wrote this. Bename takes a Perl Regular Expressions and performs a match or a substitute on all files in the pwd. The script is, also, useful for finding files of which you may not know the exact path or filename.
 
