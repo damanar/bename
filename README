@@ -13,7 +13,7 @@ INTRODUCTION
 
 Current Maintainer: damanar <damanar at gmail dot com>
 
-I couldn't find a CLI tool to do recursive renaming of files, so I wrote this. Bename takes a Perl Regular Expressions and performs a match or a substitute on all files in the pwd. The script is, also, useful for finding files of which you may not know the exact path or filename.
+Simpler way to rename files recursively with regexp, also allows for copying instead of clobbering the original files. Bename takes a Perl Regular Expressions and performs a match or a substitute on all files in the pwd. The script is, also, useful for finding files of which you may not know the exact path or filename.
 
 INSTALLATION
 ------------
@@ -55,7 +55,6 @@ EXAMPLES
 
 	don't forget to escape shell important characters, or cloak in "",
 				like:	$()\
-	currently does not support quantifiers {\d,\d} in substitution mode.
 
 CHANGE LOG
 ------------

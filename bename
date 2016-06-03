@@ -67,8 +67,6 @@ OPTIONS
 
 	variables are best written as $, "s{(pat)tern}{\$&\$1}" => patternpat
 	don't forget to cloak shell important characters in "", like:	$()\
-	currently does not support specific quantifiers, ex {\d,\d},
-	in substitution mode.
 
 HERE
 
