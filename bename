@@ -1,0 +1,251 @@
+#!/usr/bin/perl
+########################################################################################################
+#
+#  use this script to rename files with regular expressions
+#  
+#  12/01/2009   damanar       created initial version
+#  06/02/2016   damanar       current version bename0.99beta
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#  
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#  
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+#  
+########################################################################################################
+
+use strict;
+use warnings;
+use Cwd;
+use File::Find;
+use File::Copy;
+
+#variables
+my $cwd = getcwd;
+my @files; #holds file names
+my @paths; #holds paths to files
+my $flags;  #holds whole list of flags -lrq
+my $quiet = 0; #toggle for quiet mode
+my $recursion = 0; #toggle for recursion
+my $list = 0; #toggle for list mode
+my $copy = 0; #toggle for copy mode
+my $match = 0; #toggle for match mode
+my $regex; # entire regex
+my $expression; # expression for file find
+my $modifiers = ""; # holds operators g and i
+my $i = 0; # counter for when needed
+
+#help call
+my $helpFile = <<'HERE';
+bename	v.99 damanar 12/17/2009
+
+Usage: 	bename [OPTION]... s{PATTERN}{SUBSTITUTION}
+		bename [OPTION]... /PATTERN/
+
+--help	calls this info.
+
+OPTIONS
+	-c	toggles copy mode, no changes are made to original files,
+		original files will be copied to new filenames	
+	-l	toggles list mode, no changes are made to files,
+		use this to test your regexs and see what affects they will have
+	-r	toggles recursive mode, applies your expression
+		recursively from current working directory
+	-q	toggles quiet mode, no output from the program
+
+	variables are best written as $, "s{(pat)tern}{\$&\$1}" => patternpat
+	don't forget to cloak shell important characters in "", like:	$()\
+	currently does not support specific quantifiers, ex {\d,\d},
+	in substitution mode.
+
+HERE
+
+#subroutines
+# spits out the $helpFile heredoc when called
+sub helpCall {
+	print $helpFile;
+}
+
+# assists getFiles (below) with finding matched files
+sub wanted {
+	# ignoring directories
+	unless ( -d "$_[0]" ) { 
+		push( @files, $_[0] );
+		push( @paths, $_[1] );
+	}
+}
+
+# grabs all matched files and places them into @files array, values are identified from root directory
+sub getFiles { 
+	# building list of all files/folders below CWD
+	my @fileArray = $File::Find::name;
+
+	for my $file ( @fileArray ) {
+		# cutting out CWD to make file paths relative
+		$file =~ s{$cwd/}{};
+		chomp $file;
+		# splitting files into filenames and paths in order to ensure directories do not get renamed
+		$file =~ /[^\/]*$/;
+		$file = $&;
+		my $path = $`;
+
+		# grabbing any operators that may have been added to the regex: g == global, i == ignore case
+		if ( $modifiers =~ /gi/ ) { 
+			if ( $file =~ /$expression/gi ) {
+				&wanted($file, $path);
+			}
+		}
+		elsif ( $modifiers =~ /g/ ) { 
+			if ( $file =~ /$expression/g ) {
+				&wanted($file, $path);
+			}
+		}
+		elsif ( $modifiers =~ /i/ ) { 
+			if ( $file =~ /$expression/i ) {
+				&wanted($file, $path);
+			}
+		}
+		else { 
+			if ( $file =~ /$expression/ ) {
+				&wanted($file, $path);
+			}
+		}
+	}
+}	
+
+# grabs all matched files and places them into @files array, values are identified from root directory
+sub globber { 
+	# building list of all files/folders below CWD
+	my @fileArray = glob ".* *";
+
+	for my $file ( @fileArray ) {
+		# cutting out CWD to make file paths relative
+		chomp $file;
+
+		# grabbing any operators that may have been added to the regex: g == global, i == ignore case
+		if ( $modifiers =~ /gi/ ) { 
+			if ( $file =~ /$expression/gi ) {
+				&wanted($file, "");
+			}
+		}
+		elsif ( $modifiers =~ /g/ ) { 
+			if ( $file =~ /$expression/g ) {
+				&wanted($file, "");
+			}
+		}
+		elsif ( $modifiers =~ /i/ ) { 
+			if ( $file =~ /$expression/i ) {
+				&wanted($file, "");
+			}
+		}
+		else { 
+			if ( $file =~ /$expression/ ) {
+				&wanted($file, "");
+			}
+		}
+	}
+}	
+
+#body
+#parsing input from script call
+
+#is there a flag?
+if (  !@ARGV || $ARGV[0] =~ /^-/ ) {
+	#if no input or --help print helpFile
+	if ( !@ARGV || $ARGV[0] =~ /--help/ ) {
+		&helpCall;
+		exit;
+	}
+	#what flag is it?
+	elsif ( $ARGV[0] =~ /-(\w+)/ ) {
+		$flags = shift @ARGV;
+		my $flagList = $1;
+		if ( $flagList =~ /[cC]/ ) { $copy = 1; }
+		if ( $flagList =~ /[qQ]/ ) { $quiet = 1; }
+		if ( $flagList =~ /[lL]/ ) { $list = 1; }
+		if ( $flagList =~ /[rR]/ ) { $recursion = 1; }
+	}
+}
+# pull out regex either a match "/expression/" or substitution "s{expression}{substitution}"
+$regex = shift @ARGV;
+
+#if match case
+if ( $regex =~ /^\/(.*)\/([gi]{0,2})$/ ) {
+	$match = 1; #toggles match mode
+	$expression = $1;
+	$modifiers = $2;
+}
+#if substitution case
+elsif ( $regex =~ /^s{(.*)}{.*}([gi]{0,2})$/ ) {
+	$expression = $1;
+	$modifiers = $2;
+}
+#something is wrong with the input
+else { &helpCall; exit;} 
+
+
+
+#begin finding files that match expression
+if ( $quiet == "0" ) { print "Compiling list of files...\n"; }
+if ( $recursion == 1 ) {
+	find(\&getFiles, cwd);
+}
+else {
+	&globber;
+}
+
+	if ( $match == 0 && $list == 1 ) {
+		print "Listing file changes:\n";
+	}
+	elsif ( $list == 1 ) {
+		print "Listing files that will be affected:\n";
+	}
+
+
+####################### loop where work is done #####################
+foreach ( @files ) {
+
+	if ( $match == 1 && $list == 0 ) {
+		print "$paths[$i]$_\n";
+		$i++;
+		next;
+	}
+		my $oldFile = $_;
+		eval $regex;
+		die $@ if $@;
+
+	if ( $list == "1" ) {
+		printf "%s%-30s ==> %-30s\n", $paths[$i], $oldFile, $_;
+	}
+	else {
+		if ( $quiet == "0" ) { printf "%s%-35s ==> %-35s\n", $paths[$i], $oldFile, $_; }
+		if( -e "${paths[$i]}$_" ){
+			warn "\t${paths[$i]}$_ already exists\n";
+		}
+		else {
+			if( $copy ){
+				copy("${paths[$i]}$oldFile", "${paths[$i]}$_" );
+			}
+			else {
+				rename("${paths[$i]}$oldFile", "${paths[$i]}$_" );
+			}
+		}
+	}
+	$i++;
+}
+####################### loop where work is done #####################
+
+#end program
+1;

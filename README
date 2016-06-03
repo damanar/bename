@@ -1,0 +1,64 @@
+CONTENTS OF THIS FILE
+---------------------
+
+ * Introduction
+ * Installation
+ * Usage
+ * Examples
+ * Change Log
+
+
+INTRODUCTION
+------------
+
+Current Maintainer: damanar <damanar@gmail.com>
+
+I couldn't find a CLI tool to do recursive renaming of files, so I wrote this. Bename takes a Perl Regular Expressions and performs a match or a substitute on all files in the pwd. The script is, also, useful for finding files of which you may not know the exact path or filename.
+
+INSTALLATION
+------------
+
+Clone the Git repo, then either place the bename folder in your $PATH or place a soft link in your /usr/bin/. No additional modules are needed.
+
+USAGE
+------------
+
+bename [OPTION]... s{PATTERN}{SUBSTITUTION}
+		bename [OPTION]... /PATTERN/
+
+--help	calls this info, or nothing like a real script should.
+
+OPTIONS
+	-c	toggles copy mode, no changes are made to original files,
+		original files will be copied to new filenames	
+	-l	toggles list mode, no changes are made to files,
+		use this to test your regexs and see what affects they will have
+	-r	toggles recursive mode, applies your expression
+		recursively from current working directory
+	-q	toggles quiet mode, no output from the program
+
+EXAMPLES
+------------
+	Use any perl pattern to match files and substitute
+	bename s{html$}{htm} ( foo.html --> foo.htm in current directory )
+
+	Match files recursively based on supplied pattern, useful for finding files
+	bename -r /foo[_-]\(bar\)?/ ( recursively lists all files that
+		match foo_bar, foo-bar, foo_, foo- ) 
+
+	List the changes that would be made with the supplied substitution
+	bename -l "s{foo([_-])(bar)}{\L\$2\$1foo}gi
+		foo_bar --> bar_foo
+		fOO-bAr_Foo-BaR --> bar-foo_bar-foo
+
+
+
+	don't forget to escape shell important characters, or cloak in "",
+				like:	$()\
+	currently does not support quantifiers {\d,\d} in substitution mode.
+
+CHANGE LOG
+------------
+
+06/02/2016 - 	v.99 Packaged for Github Repo
+							added copy only mode
